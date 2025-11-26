@@ -1,0 +1,59 @@
+# =========================
+# Core Framework
+# =========================
+fastapi==0.115.5
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+pydantic==2.9.2
+aiofiles==24.1.0
+
+# =========================
+# Language Models & Embeddings
+# =========================
+sentence-transformers==3.0.1
+faiss-cpu==1.8.0.post1
+llama-cpp-python==0.2.90
+
+# =========================
+# Vector Database
+# =========================
+pinecone-client==5.0.1
+
+# =========================
+# LangGraph Ecosystem
+# =========================
+langchain==0.2.14
+langchain-core==0.2.35
+langchain-community==0.2.12
+langgraph==0.0.40
+networkx==3.3
+
+# =========================
+# Model Context Protocol
+# =========================
+modelcontextprotocol==0.1.0
+
+# =========================
+# Speech Input / Output
+# =========================
+faster-whisper==1.0.3
+pyttsx3==2.90
+sounddevice==0.5.0
+
+# =========================
+# Utilities & Monitoring
+# =========================
+psutil==6.0.0
+numpy==1.26.4
+tqdm==4.66.5
+requests==2.32.3
+
+# =========================
+# PDF Generation & File Handling
+# =========================
+py2pdf==0.5.0
+PyPDF2==3.0.1
+
+
+tenacity==8.4.2
+rich==13.7.1
