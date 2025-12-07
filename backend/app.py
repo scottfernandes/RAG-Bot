@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import speech_recognition as sr
-from pydub import AudioSegment
 from gtts import gTTS
 from pinecone import Pinecone
 from fastapi.responses import StreamingResponse
@@ -29,30 +28,32 @@ app.add_middleware(
     allow_methods=["*"],  
     allow_headers=["*"],
 )
-
 @app.post("/ask")
-async def ask_question(req: QueryRequest):
+def ask_question(req: QueryRequest):
     """Answer questions using RAG pipeline with streaming."""
     
-    async def generate():
+    def ndjson_generator():
         try:
-            async for chunk in get_rag_ans(req.query):
-                yield f"data: {json.dumps({'content': chunk})}\n\n"
+            print(f"Received query: {req.query}")
+            chunks = get_rag_ans(req.query)  
+            for chunk in chunks:
+                if chunk:
+                    json_line = json.dumps({"content": chunk}) + "\n"
+                    yield json_line.encode('utf-8')
             
-            yield f"data: {json.dumps({'done': True})}\n\n"
+            yield (json.dumps({"done": True}) + "\n").encode('utf-8')
             
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    
+            yield (json.dumps({"error": str(e)}) + "\n").encode('utf-8')
     return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
+        ndjson_generator(),
+        media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         }
     )
-
 
 
 @app.post("/upload-files")

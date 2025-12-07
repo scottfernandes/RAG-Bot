@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from typing_extensions import TypedDict, List,Annotated
 from langgraph.graph import StateGraph, START, END,add_messages
 from langchain_core.prompts import ChatPromptTemplate
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -11,13 +11,15 @@ import os
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 import time
 from tools import retrieve_from_pinecone
+import sqlite3
 load_dotenv()
 
 llm = init_chat_model("llama-3.1-8b-instant", model_provider="groq")
 config= {"configurable": {"thread_id": "1"}}
 
 model = SentenceTransformerEmbeddings(model_name="intfloat/e5-large-v2")
-checkpointer=MemorySaver()  
+conn = sqlite3.connect('mybot.db',check_same_thread=False)
+checkpointer=SqliteSaver(conn=conn) 
 
 class State(TypedDict):
     messages: Annotated[list,add_messages]
@@ -73,15 +75,29 @@ workflow.add_edge("generate_ans",END)
 
 chain = workflow.compile(checkpointer=checkpointer)
 
-async def get_rag_ans(query: str):
-    
-    async for event in chain.astream({
-        "messages": [HumanMessage(content=query)],
-        "query": query,
-        "context": "",
-    }, config):
-        for node_name, node_output in event.items():
-            if node_name == "generate_ans" and "messages" in node_output:
-                ai_messages = [msg for msg in node_output["messages"] if isinstance(msg, AIMessage)]
-                if ai_messages:
-                    yield ai_messages[-1].content
+def get_rag_ans(query: str):
+    """Generate response chunks - SYNC function"""
+    try:
+        print(f"Starting chain.stream with query: {query}")
+        
+        for message, metadata in chain.stream(
+            {"messages": [HumanMessage(content=query)],
+             "query":query,
+             "context":''
+            },
+            config=config,
+            stream_mode="messages"
+        ):
+           
+            
+            if hasattr(message, 'content'):
+                content = message.content
+                if content: 
+                    yield content
+                else:
+                    print("Content is empty, not yielding")
+            else:
+                print("No content attribute")
+                
+    except Exception as e:
+        print(f"Error in get_rag_ans: {e}")
